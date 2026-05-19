@@ -4,21 +4,98 @@ let currentChat = null;
 /* LOAD */
 window.onload = function () {
 
-    const saved = localStorage.getItem("all_chats");
-    if (saved) chats = JSON.parse(saved);
+    const saved =
+        localStorage.getItem(
+            "all_chats"
+        );
+
+    if(saved){
+
+        chats =
+            JSON.parse(saved);
+
+    }
+
+
+    /* always create active chat if none exists */
+    if(
+        Object.keys(chats)
+        .length === 0
+    ){
+
+        const id =
+            "chat_" + Date.now();
+
+        chats[id] = {
+
+            title:"New Chat",
+
+            messages:[],
+
+            pinned:false
+
+        };
+
+        currentChat = id;
+
+        save();
+
+    }
+
+    else{
+
+    const id =
+        "chat_" + Date.now();
+
+    chats[id] = {
+
+        title:"New Chat",
+
+        messages:[],
+
+        pinned:false
+
+    };
+
+    currentChat = id;
+
+    save();
+
+}
+
 
     renderSidebar();
 
-    const first = Object.keys(chats)[0];
-    if (first) loadChat(first);
 
-    document.getElementById("message-input")
-    .addEventListener("keydown", function(e){
-        if(e.key === "Enter"){
-            e.preventDefault();
-            sendMessage();
+    /* show welcome screen */
+    document
+    .getElementById("empty")
+    .style.display = "flex";
+
+
+    document
+    .getElementById("message-input")
+
+    .addEventListener(
+
+        "keydown",
+
+        function(e){
+
+            if(
+                e.key === "Enter"
+            ){
+
+                e.preventDefault();
+
+                sendMessage();
+
+            }
+
         }
-    });
+
+    );
+
 };
 
 /* NEW CHAT */
@@ -41,8 +118,24 @@ function newChat(){
 
 /* LOAD CHAT */
 function loadChat(id){
+    if(
+
+    currentChat &&
+
+    chats[currentChat] &&
+
+    chats[currentChat].messages.length === 0 &&
+
+    chats[currentChat].title === "New Chat"
+
+){
+
+    delete chats[currentChat];
+
+}
 
     currentChat = id;
+    renderSidebar();
 
     const box = document.getElementById("chat-box");
     box.innerHTML = "";
@@ -61,11 +154,81 @@ async function sendMessage(){
 
     const input = document.getElementById("message-input");
     const text = input.value.trim();
+    document
+.getElementById("empty")
+.style.display = "none";
     if(!text || !currentChat) return;
 
     input.value = "";
 
     addMessage("user", text);
+ if(
+    chats[currentChat].title
+    === "New Chat"
+){
+
+    const words =
+
+        text
+        .toLowerCase()
+        .split(" ");
+
+
+    const skip = [
+
+        "hi",
+        "hello",
+        "hey",
+        "i",
+        "want",
+        "wanna",
+        "to",
+        "talk",
+        "about",
+        "on",
+        "the",
+        "a",
+        "my"
+    ];
+
+
+    const useful =
+
+        words.filter(
+
+            word =>
+
+            !skip.includes(
+                word
+            )
+
+        );
+
+
+    if(
+        useful.length > 0
+    ){
+
+        chats[currentChat].title =
+
+            useful
+            .slice(0,2)
+            .join(" ");
+
+    }
+
+    else{
+
+        chats[currentChat].title =
+
+            text.substring(0,15);
+
+    }
+
+
+    renderSidebar();
+
+}
 
     const botId = "bot_" + Date.now();
     addMessage("bot", "...", botId);
@@ -128,15 +291,69 @@ function typeText(id,text){
 /* RENDER SIDEBAR */
 function renderSidebar(){
 
-    const sidebar = document.getElementById("sidebar");
+    const sidebar =
+        document.getElementById(
+            "sidebar"
+        );
+
     sidebar.innerHTML = "";
 
-    Object.keys(chats).forEach(id=>{
 
-        const div = document.createElement("div");
-        div.className = "chat-item";
+    const sortedChats =
+
+        Object.keys(chats)
+
+    .sort((a,b)=>{
+
+    /* pinned always first */
+    if(
+        chats[a].pinned &&
+        !chats[b].pinned
+    ) return -1;
+
+    if(
+        !chats[a].pinned &&
+        chats[b].pinned
+    ) return 1;
+
+
+    /* current active chat after pins */
+    if(
+        a === currentChat
+    ) return -1;
+
+    if(
+        b === currentChat
+    ) return 1;
+
+
+    return 0;
+
+});
+
+
+    sortedChats.forEach(id=>{
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+      div.className =
+
+    currentChat === id
+
+    ?
+
+    "chat-item active-chat"
+
+    :
+
+    "chat-item";
+
 
         div.innerHTML = `
+
             <div class="chat-title"
                  onclick="loadChat('${id}')">
 
@@ -147,7 +364,9 @@ function renderSidebar(){
 
             <button class="dots-btn"
                     onclick="toggleMenu(event,'${id}')">
+
                 ⋮
+
             </button>
 
             <div class="chat-menu"
@@ -166,10 +385,15 @@ function renderSidebar(){
                 </div>
 
             </div>
+
         `;
 
-        sidebar.appendChild(div);
+        sidebar.appendChild(
+            div
+        );
+
     });
+
 }
 /* RENAME */
 function renameChat(id){
@@ -181,9 +405,15 @@ function renameChat(id){
 
 /* PIN */
 function pinChat(id){
-    chats[id].pinned = !chats[id].pinned;
+
+    chats[id].pinned =
+
+        !chats[id].pinned;
+
     save();
+
     renderSidebar();
+
 }
 
 /* DELETE */
